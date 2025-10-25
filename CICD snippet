@@ -1,0 +1,29 @@
+#!/bin/bash
+
+TARGET="/var/server/nexus-backend"
+BRANCH="main"
+
+while read oldrev newrev ref
+do
+    if [[ $ref = refs/heads/$BRANCH ]]; then
+        echo "Deploying $BRANCH branch to $TARGET..."
+        
+        # Checkout the branch to the target directory
+        git --work-tree=$TARGET --git-dir=/var/git/nexus-backend.git checkout -f $BRANCH
+        
+        echo "Running npm install..."
+        cd $TARGET || exit
+        npm install
+        
+        echo "Generating Prisma client..."
+        npx prisma generate
+        
+        echo "Deploying database migrations..."
+        npx prisma migrate deploy
+        
+        echo "Restarting PM2..."
+        pm2 restart all
+        
+        echo "Deployment done."
+    fi
+done
